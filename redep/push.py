@@ -128,6 +128,11 @@ def push_local(files, root_dir, path):
     if not path.is_absolute():
         path = root_dir / path
 
+    # if path coincides with root_dir, no need to push
+    if path == root_dir:
+        logging.info("Destination path coincides with root directory; no files pushed.")
+        return
+
     for file_path in files:
         relative_path = file_path.relative_to(root_dir)
         destination_path = path / relative_path
