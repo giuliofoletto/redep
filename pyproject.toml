@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "redep"
+dynamic = ["version"]
+description = "A glorified scp script to redeploy files to multiple remote machines."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    { name = "Giulio Foletto", email = "giulio.foletto@outlook.com" },
+]
+dependencies = [
+    "click",
+    "fabric",
+]
+
+[project.scripts]
+redep = "redep.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/giuliofoletto/redep"
+
+[tool.hatch.version]
+path = "redep/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/redep",
+]
