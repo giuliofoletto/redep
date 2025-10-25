@@ -14,8 +14,8 @@ def init(config_path):
 ignore = ["./{str(file_name).replace("\\", "/")}"]
     
 [[destinations]]
-host = ""
-path = ""
+host = ""  # Replace with remote host or leave empty for local push
+path = ""  # Replace with destination path on the host
     """
     with open(config_path, "w") as config_file:
         config_file.write(default_configuration_string.strip())
