@@ -10,9 +10,7 @@ def init(config_path):
         return
     file_name = config_path.name
     default_configuration_string = f"""
-    # redep configuration file
-match = ["./"]
-    
+    # redep configuration file    
 ignore = ["./{str(file_name).replace("\\", "/")}"]
     
 [[destinations]]
