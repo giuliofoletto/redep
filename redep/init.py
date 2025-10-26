@@ -11,7 +11,9 @@ def init(config_path):
     file_name = config_path.name
     default_configuration_string = f"""
     # redep configuration file
-match = ["**/*"]
+root_dir = "./"  # In most cases, keep as is. This means the root directory is the directory where this config file is located.
+
+match = ["**/*"]  # In most cases, keep as is. This means all files in the root directory and subdirectories are considered for deployment.
 
 ignore = ["./{str(file_name).replace("\\", "/")}"]
     

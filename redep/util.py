@@ -78,7 +78,10 @@ def find_path_new_config(starting_path=None):
 
 def read_config_file(config_path):
     config = tomllib.loads(Path(config_path).read_text())
-    root_dir = Path(config_path).parent
+    default_root_dir = Path(config_path).parent
+    root_dir = Path(config.get("root_dir", default_root_dir))
+    if not root_dir.is_absolute():
+        root_dir = (default_root_dir / root_dir).resolve()
     matches = [Path(p) for p in config.get("match", [])]
     ignores = [Path(p) for p in config.get("ignore", [])]
     destinations = config.get("destinations", [])
