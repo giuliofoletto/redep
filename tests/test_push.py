@@ -1,6 +1,7 @@
 import pytest
 
 from redep.push import push
+from redep.util import read_config_file
 
 from pathlib import Path
 
@@ -19,10 +20,25 @@ def clean():
         dst_dir.rmdir()
 
 
+def test_read_config_file():
+    config_path = Path(__file__).parent / "src_dir" / "redep.toml"
+    root_dir, matches, ignores, destinations = read_config_file(config_path)
+    assert root_dir == config_path.parent
+    assert matches == [Path("**/*")]
+    assert ignores == [Path("./redep.toml"), Path("./to_ignore.txt")]
+    assert destinations == [
+        {
+            "host": "",
+            "path": (root_dir / "../dst_dir").resolve(),
+        }
+    ]
+
+
 def test_push_local():
     clean()
     config_path = Path(__file__).parent / "src_dir" / "redep.toml"
-    push(config_path)
+    root_dir, matches, ignores, destinations = read_config_file(config_path)
+    push(root_dir, matches, ignores, destinations)
     dst_dir = Path(__file__).parent / "dst_dir"
     assert dst_dir.exists()
     expected_files = [

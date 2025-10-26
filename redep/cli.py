@@ -7,7 +7,12 @@ License: See project-level license file.
 
 import click
 
-from redep.util import configure_logging, find_existing_config, find_path_new_config
+from redep.util import (
+    configure_logging,
+    find_existing_config,
+    find_path_new_config,
+    read_config_file,
+)
 from redep.push import push
 from redep.init import init
 
@@ -22,7 +27,8 @@ def cli():
 def push_command(config_path):
     config_file = find_existing_config(config_path)
     if config_file:
-        push(config_file)
+        root_dir, matches, ignores, destinations = read_config_file(config_file)
+        push(root_dir, matches, ignores, destinations)
 
 
 @cli.command(name="init")

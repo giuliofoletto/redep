@@ -9,6 +9,7 @@ import logging
 import sys
 
 from pathlib import Path
+import tomllib
 
 
 def configure_logging():
@@ -73,3 +74,17 @@ def find_path_new_config(starting_path=None):
         result_path = Path.cwd() / "redep.toml"
         result_path.touch()
         return result_path
+
+
+def read_config_file(config_path):
+    config = tomllib.loads(Path(config_path).read_text())
+    root_dir = Path(config_path).parent
+    matches = [Path(p) for p in config.get("match", [])]
+    ignores = [Path(p) for p in config.get("ignore", [])]
+    destinations = config.get("destinations", [])
+    for i in range(len(destinations)):
+        if "path" in destinations[i]:
+            destinations[i]["path"] = (
+                root_dir / Path(destinations[i]["path"])
+            ).resolve()
+    return root_dir, matches, ignores, destinations

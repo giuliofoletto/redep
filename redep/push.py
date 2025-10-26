@@ -1,19 +1,14 @@
 import glob
 import logging
 from pathlib import Path, PurePosixPath, PureWindowsPath
-import tomllib
 
 import fabric
 import shutil
 
 
-def push(config_file):
-    config = tomllib.loads(Path(config_file).read_text())
-    ignores = config.get("ignore", [])
-    destinations = config.get("destinations", [])
-    root_dir = Path(config_file).parent
+def push(root_dir, matches, ignores, destinations):
     logging.info(f"Root directory determined as: {root_dir}")
-    selected_files, ignored_files = select_files(root_dir, ignores)
+    selected_files, ignored_files = select_files(root_dir, matches, ignores)
     if len(selected_files) == 0:
         logging.info("No files to push after applying ignore rules.")
         return
@@ -49,10 +44,12 @@ def push(config_file):
     logging.info("Push operation completed.")
 
 
-def select_files(root_dir, ignore_patterns):
-    all_files = set(
-        glob.glob(str(root_dir / "**" / "*"), recursive=True, include_hidden=True)
-    )
+def select_files(root_dir, match_patterns, ignore_patterns):
+    all_files = [
+        set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
+        for pattern in match_patterns
+    ]
+    all_files = set().union(*all_files)
     ignored_files = [
         set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
         for pattern in ignore_patterns

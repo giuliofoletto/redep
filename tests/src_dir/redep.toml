@@ -1,5 +1,7 @@
 # redep configuration file
-ignore = ["./redep.toml", "to_ignore.txt"]
+match = ["**/*"]
+
+ignore = ["./redep.toml", "./to_ignore.txt"]
 
 [[destinations]]
 host = ""
