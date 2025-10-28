@@ -86,7 +86,12 @@ def read_config_file(config_path):
     ignores = [Path(p) for p in config.get("ignore", [])]
     destinations = config.get("destinations", [])
     for i in range(len(destinations)):
-        if "path" in destinations[i]:
+        # make path absolute if host is local
+        if (
+            "host" in destinations[i]
+            and destinations[i]["host"] == ""
+            and "path" in destinations[i]
+        ):
             destinations[i]["path"] = (
                 root_dir / Path(destinations[i]["path"])
             ).resolve()
