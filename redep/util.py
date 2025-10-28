@@ -65,14 +65,9 @@ def find_path_new_config(starting_path=None):
             return result_path
         elif not result_path.exists():
             # interpret as new file path
-            # create parent directories if they don't exist
-            result_path.parent.mkdir(parents=True, exist_ok=True)
-            # create the file
-            result_path.touch()
             return result_path
     else:
         result_path = Path.cwd() / "redep.toml"
-        result_path.touch()
         return result_path
 
 

@@ -8,6 +8,8 @@ def init(config_path):
     if config_path.exists():
         logging.error(f"The configuration file '{config_path}' already exists.")
         return
+    # create parent directories if they don't exist
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     file_name = config_path.name
     default_configuration_string = f"""
     # redep configuration file
