@@ -1,7 +1,7 @@
 import pytest
 import glob
 
-from redep.push import push
+from redep.push import push, select_files
 from redep.util import read_config_file
 
 from pathlib import Path
@@ -37,6 +37,23 @@ def test_read_config_file():
             "path": (root_dir / "../dst_dir").resolve(),
         }
     ]
+
+
+def test_select_files():
+    config_path = Path(__file__).parent / "src_dir" / "redep.toml"
+    root_dir, matches, ignores, destinations = read_config_file(config_path)
+    selected_files, ignored_files = select_files(root_dir, matches, ignores)
+    expected_selected = {
+        root_dir / "to_push.txt",
+        root_dir / "to_push" / "to_push.txt",
+    }
+    expected_ignored = {
+        root_dir / "redep.toml",
+        root_dir / "to_ignore.txt",
+        root_dir / "to_ignore" / "to_ignore.txt",
+    }
+    assert selected_files == expected_selected
+    assert ignored_files == expected_ignored
 
 
 def test_push_local():
