@@ -8,19 +8,31 @@ import shutil
 
 def push(root_dir, matches, ignores, destinations):
     logging.info(f"Root directory determined as: {root_dir}")
-    selected_files, ignored_files = select_files(root_dir, matches, ignores)
-    if len(selected_files) == 0:
-        logging.info("No files to push after applying ignore rules.")
-        return
-    else:
+    selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
+        root_dir, matches, ignores
+    )
+    if len(selected_files) > 0:
         logging.info(
-            "Files to be pushed: "
+            "Selected files: "
             + ", ".join(sorted({str(file) for file in selected_files}))
+        )
+    if len(selected_dirs) > 0:
+        logging.info(
+            "Selected directories: "
+            + ", ".join(sorted({str(dir) for dir in selected_dirs}))
         )
     if len(ignored_files) > 0:
         logging.info(
             "Ignored files: " + ", ".join(sorted({str(file) for file in ignored_files}))
         )
+    if len(ignored_dirs) > 0:
+        logging.info(
+            "Ignored directories: "
+            + ", ".join(sorted({str(dir) for dir in ignored_dirs}))
+        )
+    if len(selected_files) == 0 and len(selected_dirs) == 0:
+        logging.warning("No files or directories selected for push; aborting.")
+        return
 
     for destination in destinations:
         host = destination.get("host", None)
@@ -36,33 +48,37 @@ def push(root_dir, matches, ignores, destinations):
                 # interpret as . (which will be treated as relative path with respect to root_dir)
                 path = "."
             logging.info(f"Pushing to local system at: {path}")
-            push_local(selected_files, root_dir, Path(path))
+            push_local(selected_files, selected_dirs, root_dir, Path(path))
         else:
             logging.info(f"Pushing to remote destination: {host}:{path}")
-            push_remote(selected_files, root_dir, host, Path(path))
+            push_remote(selected_files, selected_dirs, root_dir, host, Path(path))
 
     logging.info("Push operation completed.")
 
 
-def select_files(root_dir, match_patterns, ignore_patterns):
-    all_files = [
+def select_patterns(root_dir, match_patterns, ignore_patterns):
+    all_patterns = [
         set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
         for pattern in match_patterns
     ]
-    all_files = set().union(*all_files)
-    ignored_files = [
+    all_patterns = set().union(*all_patterns)
+    ignored_patterns = [
         set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
         for pattern in ignore_patterns
     ]
-    ignored_files = set().union(*ignored_files)
-    # remove directories
-    all_files = {Path(f) for f in all_files if Path(f).is_file()}
-    ignored_files = {Path(f) for f in ignored_files if Path(f).is_file()}
+    ignored_patterns = set().union(*ignored_patterns)
+    # distinguish files and directories
+    all_files = {Path(f) for f in all_patterns if Path(f).is_file()}
+    all_dirs = {Path(f) for f in all_patterns if Path(f).is_dir()}
+    ignored_files = {Path(f) for f in ignored_patterns if Path(f).is_file()}
+    ignored_dirs = {Path(f) for f in ignored_patterns if Path(f).is_dir()}
     selected_files = all_files - ignored_files
-    return selected_files, ignored_files
+    selected_dirs = all_dirs - ignored_dirs
+    selected_dirs.add(root_dir)  # always include root_dir
+    return selected_files, selected_dirs, ignored_files, ignored_dirs
 
 
-def push_remote(files, root_dir, host, path):
+def push_remote(files, dirs, root_dir, host, path):
     conn = fabric.Connection(host=host)
     # verify if host is reachable
     try:
@@ -99,6 +115,15 @@ def push_remote(files, root_dir, host, path):
             )
         path = PurePosixPath(str(path).replace("\\", "/"))  # TODO find better way
 
+    # create dirs
+    for dir_path in dirs:
+        relative_path = dir_path.relative_to(root_dir)
+        if remote_os == "windows":
+            remote_dir = PureWindowsPath(path / str(relative_path).replace("/", "\\"))
+        else:
+            remote_dir = PurePosixPath(path / str(relative_path).replace("\\", "/"))
+        logging.info(f"Creating remote directory: {remote_dir}")
+        conn.run(f"mkdir -p '{remote_dir}'")
     # push files
     for file_path in files:
         relative_path = file_path.relative_to(root_dir)
@@ -106,17 +131,11 @@ def push_remote(files, root_dir, host, path):
             remote_path = PureWindowsPath(path / str(relative_path).replace("/", "\\"))
         else:
             remote_path = PurePosixPath(path / str(relative_path).replace("\\", "/"))
-        remote_dir = remote_path.parent
-        logging.info(f"Creating remote directory: {remote_dir}")
-        conn.run(f"mkdir -p '{remote_dir}'")
-        if not file_path.is_file():
-            logging.warning(f"Skipping {str(file_path)} as it is not a file.")
-            continue
         logging.info(f"Uploading {str(file_path)} to {host}:{remote_path}")
         conn.put(file_path, str(remote_path))
 
 
-def push_local(files, root_dir, path):
+def push_local(files, dirs, root_dir, path):
     # if path starts with ~, expand it
     if str(path).startswith("~"):
         path = Path.home() / str(path)[2:]
@@ -130,14 +149,15 @@ def push_local(files, root_dir, path):
         logging.info("Destination path coincides with root directory; no files pushed.")
         return
 
+    # create dirs
+    for dir_path in dirs:
+        relative_path = dir_path.relative_to(root_dir)
+        destination_dir = path / relative_path
+        logging.info(f"Creating local directory: {destination_dir}")
+        destination_dir.mkdir(parents=True, exist_ok=True)
+    # push files
     for file_path in files:
         relative_path = file_path.relative_to(root_dir)
         destination_path = path / relative_path
-        destination_dir = destination_path.parent
-        logging.info(f"Creating local directory: {destination_dir}")
-        destination_dir.mkdir(parents=True, exist_ok=True)
-        if not Path(file_path).is_file():
-            logging.warning(f"Skipping {str(file_path)} as it is not a file.")
-            continue
         logging.info(f"Copying {str(file_path)} to {destination_path}")
         shutil.copyfile(file_path, destination_path)
