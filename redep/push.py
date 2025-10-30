@@ -115,6 +115,8 @@ def push_remote(files, dirs, root_dir, host, path):
             )
         path = PurePosixPath(str(path).replace("\\", "/"))  # TODO find better way
 
+    # reduce the directories to include only leaves
+    dirs = select_leaf_directories(dirs)
     # create dirs
     for dir_path in dirs:
         relative_path = dir_path.relative_to(root_dir)
@@ -149,6 +151,8 @@ def push_local(files, dirs, root_dir, path):
         logging.info("Destination path coincides with root directory; no files pushed.")
         return
 
+    # reduce the directories to include only leaves
+    dirs = select_leaf_directories(dirs)
     # create dirs
     for dir_path in dirs:
         relative_path = dir_path.relative_to(root_dir)
@@ -161,3 +165,20 @@ def push_local(files, dirs, root_dir, path):
         destination_path = path / relative_path
         logging.info(f"Copying {str(file_path)} to {destination_path}")
         shutil.copyfile(file_path, destination_path)
+
+
+def select_leaf_directories(directories):
+    """Given a set of directories, return only the leaf directories (i.e., those that are not parents of any other directory in the set)."""
+    leaf_dirs = set(directories)
+    skip = False
+    for dir1 in directories:
+        for dir2 in directories:
+            if dir1 != dir2 and dir2.is_relative_to(dir1):
+                if dir1 in leaf_dirs:
+                    leaf_dirs.remove(dir1)
+                    skip = True
+                    break
+        if skip:
+            skip = False
+            continue
+    return leaf_dirs

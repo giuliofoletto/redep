@@ -1,7 +1,7 @@
 import pytest
 import glob
 
-from redep.push import push, push_local, select_patterns
+from redep.push import push, push_local, select_patterns, select_leaf_directories
 from redep.util import read_config_file
 
 from pathlib import Path
@@ -123,3 +123,22 @@ def test_push_with_local_destination():
     existing_files = {Path(f) for f in existing_files if Path(f).is_file()}
     assert existing_files == expected_files
     clean()
+
+
+def test_select_leaf_directories():
+    dirs = {
+        Path("a"),
+        Path("a/b"),
+        Path("a/b/c"),
+        Path("a/b/c/d"),
+        Path("a/b/d"),
+        Path("a/e"),
+        Path("f"),
+    }
+    expected_leaf_dirs = {
+        Path("a/b/c/d"),
+        Path("a/b/d"),
+        Path("a/e"),
+        Path("f"),
+    }
+    assert select_leaf_directories(dirs) == expected_leaf_dirs
