@@ -3,7 +3,7 @@ root_dir = "./"  # In most cases, keep as is. This means the root directory is t
 
 match = ["**/*"]  # In most cases, keep as is. This means all files in the root directory and subdirectories are considered for deployment.
 
-ignore = ["./redep.toml", "./to_ignore.txt"]
+ignore = ["./redep.toml", "./to_ignore.txt", "./to_ignore/**"]
 
 [[destinations]]
 host = ""
