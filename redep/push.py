@@ -1,6 +1,7 @@
 import glob
 import logging
 from pathlib import Path, PurePosixPath, PureWindowsPath
+from threading import Thread
 
 import fabric
 import shutil
@@ -34,6 +35,7 @@ def push(root_dir, matches, ignores, destinations):
         logging.warning("No files or directories selected for push; aborting.")
         return
 
+    threads = []
     for destination in destinations:
         host = destination.get("host", None)
         path = destination.get("path", None)
@@ -48,11 +50,22 @@ def push(root_dir, matches, ignores, destinations):
                 # interpret as . (which will be treated as relative path with respect to root_dir)
                 path = "."
             logging.info(f"Pushing to local system at: {path}")
-            push_local(selected_files, selected_dirs, root_dir, Path(path))
+            new_thread = Thread(
+                target=push_local,
+                args=(selected_files, selected_dirs, root_dir, Path(path)),
+            )
+            new_thread.start()
+            threads.append(new_thread)
         else:
             logging.info(f"Pushing to remote destination: {host}:{path}")
-            push_remote(selected_files, selected_dirs, root_dir, host, Path(path))
-
+            new_thread = Thread(
+                target=push_remote,
+                args=(selected_files, selected_dirs, root_dir, host, Path(path)),
+            )
+            new_thread.start()
+            threads.append(new_thread)
+    for t in threads:
+        t.join()
     logging.info("Push operation completed.")
 
 
