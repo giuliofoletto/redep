@@ -13,6 +13,7 @@ from redep.util import (
     find_path_new_config,
     read_config_file,
 )
+from redep.pull import pull
 from redep.push import push
 from redep.init import init
 
@@ -25,6 +26,15 @@ def cli():
 @cli.command(name="push")
 @click.argument("config_path", type=click.Path(), required=False)
 def push_command(config_path):
+    config_file = find_existing_config(config_path)
+    if config_file:
+        root_dir, matches, ignores, remotes = read_config_file(config_file)
+        push(root_dir, matches, ignores, remotes)
+
+
+@cli.command(name="pull")
+@click.argument("config_path", type=click.Path(), required=False)
+def pull_command(config_path):
     config_file = find_existing_config(config_path)
     if config_file:
         root_dir, matches, ignores, remotes = read_config_file(config_file)

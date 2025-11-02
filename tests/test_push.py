@@ -1,5 +1,6 @@
 import pytest
 import glob
+import shutil
 
 from redep.push import push, push_local
 from redep.util import read_config_file, select_patterns
@@ -9,16 +10,7 @@ from pathlib import Path
 
 def clean():
     dst_dir = Path(__file__).parent / "dst_dir"
-    if dst_dir.exists():
-        for item in dst_dir.glob("*"):
-            if item.is_file():
-                item.unlink()
-            elif item.is_dir():
-                for subitem in item.glob("**/*"):
-                    if subitem.is_file():
-                        subitem.unlink()
-                item.rmdir()
-        dst_dir.rmdir()
+    shutil.rmtree(dst_dir, ignore_errors=True)
 
 
 def test_push_local():
