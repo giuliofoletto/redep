@@ -23,7 +23,7 @@ def clean():
 
 def test_read_config_file():
     config_path = Path(__file__).parent / "src_dir" / "redep.toml"
-    root_dir, matches, ignores, destinations = read_config_file(config_path)
+    root_dir, matches, ignores, remotes = read_config_file(config_path)
     assert root_dir == config_path.parent
     assert matches == [Path("**/*")]
     assert ignores == [
@@ -31,7 +31,7 @@ def test_read_config_file():
         Path("./to_ignore.txt"),
         Path("./to_ignore/**"),
     ]
-    assert destinations == [
+    assert remotes == [
         {
             "host": "",
             "path": (root_dir / "../dst_dir").resolve(),
@@ -41,7 +41,7 @@ def test_read_config_file():
 
 def test_select_patterns():
     config_path = Path(__file__).parent / "src_dir" / "redep.toml"
-    root_dir, matches, ignores, destinations = read_config_file(config_path)
+    root_dir, matches, ignores, remotes = read_config_file(config_path)
     selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
         root_dir, matches, ignores
     )

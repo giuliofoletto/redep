@@ -79,15 +79,9 @@ def read_config_file(config_path):
         root_dir = (default_root_dir / root_dir).resolve()
     matches = [Path(p) for p in config.get("match", [])]
     ignores = [Path(p) for p in config.get("ignore", [])]
-    destinations = config.get("destinations", [])
-    for i in range(len(destinations)):
+    remotes = config.get("remotes", [])
+    for i in range(len(remotes)):
         # make path absolute if host is local
-        if (
-            "host" in destinations[i]
-            and destinations[i]["host"] == ""
-            and "path" in destinations[i]
-        ):
-            destinations[i]["path"] = (
-                root_dir / Path(destinations[i]["path"])
-            ).resolve()
-    return root_dir, matches, ignores, destinations
+        if "host" in remotes[i] and remotes[i]["host"] == "" and "path" in remotes[i]:
+            remotes[i]["path"] = (root_dir / Path(remotes[i]["path"])).resolve()
+    return root_dir, matches, ignores, remotes

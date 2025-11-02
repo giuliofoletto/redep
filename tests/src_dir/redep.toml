@@ -5,6 +5,6 @@ match = ["**/*"]  # In most cases, keep as is. This means all files in the root 
 
 ignore = ["./redep.toml", "./to_ignore.txt", "./to_ignore/**"]
 
-[[destinations]]
+[[remotes]]
 host = ""
 path = "../dst_dir/"

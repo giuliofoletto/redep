@@ -27,8 +27,8 @@ def cli():
 def push_command(config_path):
     config_file = find_existing_config(config_path)
     if config_file:
-        root_dir, matches, ignores, destinations = read_config_file(config_file)
-        push(root_dir, matches, ignores, destinations)
+        root_dir, matches, ignores, remotes = read_config_file(config_file)
+        push(root_dir, matches, ignores, remotes)
 
 
 @cli.command(name="init")
