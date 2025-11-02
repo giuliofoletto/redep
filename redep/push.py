@@ -8,26 +8,26 @@ import shutil
 
 
 def push(root_dir, matches, ignores, destinations):
-    logging.info(f"Root directory determined as: {root_dir}")
+    logging.debug(f"Root directory determined as: {root_dir}")
     selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
         root_dir, matches, ignores
     )
     if len(selected_files) > 0:
-        logging.info(
+        logging.debug(
             "Selected files: "
             + ", ".join(sorted({str(file) for file in selected_files}))
         )
     if len(selected_dirs) > 0:
-        logging.info(
+        logging.debug(
             "Selected directories: "
             + ", ".join(sorted({str(dir) for dir in selected_dirs}))
         )
     if len(ignored_files) > 0:
-        logging.info(
+        logging.debug(
             "Ignored files: " + ", ".join(sorted({str(file) for file in ignored_files}))
         )
     if len(ignored_dirs) > 0:
-        logging.info(
+        logging.debug(
             "Ignored directories: "
             + ", ".join(sorted({str(dir) for dir in ignored_dirs}))
         )
@@ -49,7 +49,6 @@ def push(root_dir, matches, ignores, destinations):
             if path == "":
                 # interpret as . (which will be treated as relative path with respect to root_dir)
                 path = "."
-            logging.info(f"Pushing to local system at: {path}")
             new_thread = Thread(
                 target=push_local,
                 args=(selected_files, selected_dirs, root_dir, Path(path)),
@@ -57,7 +56,6 @@ def push(root_dir, matches, ignores, destinations):
             new_thread.start()
             threads.append(new_thread)
         else:
-            logging.info(f"Pushing to remote destination: {host}:{path}")
             new_thread = Thread(
                 target=push_remote,
                 args=(selected_files, selected_dirs, root_dir, host, Path(path)),
@@ -66,7 +64,7 @@ def push(root_dir, matches, ignores, destinations):
             threads.append(new_thread)
     for t in threads:
         t.join()
-    logging.info("Push operation completed.")
+    logging.info("All push operations completed.")
 
 
 def select_patterns(root_dir, match_patterns, ignore_patterns):
@@ -92,6 +90,7 @@ def select_patterns(root_dir, match_patterns, ignore_patterns):
 
 
 def push_remote(files, dirs, root_dir, host, path):
+    logging.info(f"Pushing to remote destination: {host}:{path}")
     conn = fabric.Connection(host=host)
     # verify if host is reachable
     try:
@@ -103,11 +102,19 @@ def push_remote(files, dirs, root_dir, host, path):
     result = conn.run("uname -s", hide=True, warn=True)
     remote_os = None
     if result.failed:
-        remote_os = "windows"
-        logging.warning(f"Remote host '{host}' does not seem to be a POSIX system.")
+        # check if it's windows by running 'ver' command
+        result_ver = conn.run("ver", hide=True, warn=True)
+        if result_ver.failed:
+            logging.warning(
+                f"Could not determine operating system of remote host '{host}'; assuming POSIX-compliant."
+            )
+            remote_os = "posix"
+        else:
+            remote_os = "windows"
+            logging.debug(f"Remote host '{host}' does not seem to be a POSIX system.")
     else:
         remote_os = result.stdout.strip()
-        logging.info(f"Remote host '{host}' is running: {remote_os}")
+        logging.debug(f"Remote host '{host}' is running: {remote_os}")
 
     # if path starts with ~, expand it
     if remote_os == "windows":
@@ -137,7 +144,7 @@ def push_remote(files, dirs, root_dir, host, path):
             remote_dir = PureWindowsPath(path / str(relative_path).replace("/", "\\"))
         else:
             remote_dir = PurePosixPath(path / str(relative_path).replace("\\", "/"))
-        logging.info(f"Creating remote directory: {remote_dir}")
+        logging.debug(f"Creating remote directory: {remote_dir}")
         conn.run(f"mkdir -p '{remote_dir}'")
     # push files
     for file_path in files:
@@ -146,11 +153,13 @@ def push_remote(files, dirs, root_dir, host, path):
             remote_path = PureWindowsPath(path / str(relative_path).replace("/", "\\"))
         else:
             remote_path = PurePosixPath(path / str(relative_path).replace("\\", "/"))
-        logging.info(f"Uploading {str(file_path)} to {host}:{remote_path}")
+        logging.debug(f"Uploading {str(file_path)} to {host}:{remote_path}")
         conn.put(file_path, str(remote_path))
+    logging.info(f"Completed push to remote destination: {host}:{path}")
 
 
 def push_local(files, dirs, root_dir, path):
+    logging.info(f"Pushing to local system at: {path}")
     # if path starts with ~, expand it
     if str(path).startswith("~"):
         path = Path.home() / str(path)[2:]
@@ -161,7 +170,9 @@ def push_local(files, dirs, root_dir, path):
 
     # if path coincides with root_dir, no need to push
     if path == root_dir:
-        logging.info("Destination path coincides with root directory; no files pushed.")
+        logging.warning(
+            "Destination path coincides with root directory; no files pushed."
+        )
         return
 
     # reduce the directories to include only leaves
@@ -170,14 +181,15 @@ def push_local(files, dirs, root_dir, path):
     for dir_path in dirs:
         relative_path = dir_path.relative_to(root_dir)
         destination_dir = path / relative_path
-        logging.info(f"Creating local directory: {destination_dir}")
+        logging.debug(f"Creating local directory: {destination_dir}")
         destination_dir.mkdir(parents=True, exist_ok=True)
     # push files
     for file_path in files:
         relative_path = file_path.relative_to(root_dir)
         destination_path = path / relative_path
-        logging.info(f"Copying {str(file_path)} to {destination_path}")
+        logging.debug(f"Copying {str(file_path)} to {destination_path}")
         shutil.copyfile(file_path, destination_path)
+    logging.info(f"Completed push to local system at: {path}")
 
 
 def select_leaf_directories(directories):
