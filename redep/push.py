@@ -1,10 +1,11 @@
-import glob
 import logging
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from threading import Thread
 
 import fabric
 import shutil
+
+from redep.util import select_patterns, select_leaf_directories
 
 
 def push(root_dir, matches, ignores, destinations):
@@ -65,28 +66,6 @@ def push(root_dir, matches, ignores, destinations):
     for t in threads:
         t.join()
     logging.info("All push operations completed.")
-
-
-def select_patterns(root_dir, match_patterns, ignore_patterns):
-    all_patterns = [
-        set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
-        for pattern in match_patterns
-    ]
-    all_patterns = set().union(*all_patterns)
-    ignored_patterns = [
-        set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
-        for pattern in ignore_patterns
-    ]
-    ignored_patterns = set().union(*ignored_patterns)
-    # distinguish files and directories
-    all_files = {Path(f) for f in all_patterns if Path(f).is_file()}
-    all_dirs = {Path(f) for f in all_patterns if Path(f).is_dir()}
-    ignored_files = {Path(f) for f in ignored_patterns if Path(f).is_file()}
-    ignored_dirs = {Path(f) for f in ignored_patterns if Path(f).is_dir()}
-    selected_files = all_files - ignored_files
-    selected_dirs = all_dirs - ignored_dirs
-    selected_dirs.add(root_dir)  # always include root_dir
-    return selected_files, selected_dirs, ignored_files, ignored_dirs
 
 
 def push_remote(files, dirs, root_dir, host, path):
@@ -190,20 +169,3 @@ def push_local(files, dirs, root_dir, path):
         logging.debug(f"Copying {str(file_path)} to {destination_path}")
         shutil.copyfile(file_path, destination_path)
     logging.info(f"Completed push to local system at: {path}")
-
-
-def select_leaf_directories(directories):
-    """Given a set of directories, return only the leaf directories (i.e., those that are not parents of any other directory in the set)."""
-    leaf_dirs = set(directories)
-    skip = False
-    for dir1 in directories:
-        for dir2 in directories:
-            if dir1 != dir2 and dir2.is_relative_to(dir1):
-                if dir1 in leaf_dirs:
-                    leaf_dirs.remove(dir1)
-                    skip = True
-                    break
-        if skip:
-            skip = False
-            continue
-    return leaf_dirs

@@ -5,6 +5,7 @@ Authors: Giulio Foletto.
 License: See project-level license file.
 """
 
+import glob
 import logging
 import sys
 
@@ -85,3 +86,42 @@ def read_config_file(config_path):
         if "host" in remotes[i] and remotes[i]["host"] == "" and "path" in remotes[i]:
             remotes[i]["path"] = (root_dir / Path(remotes[i]["path"])).resolve()
     return root_dir, matches, ignores, remotes
+
+
+def select_patterns(root_dir, match_patterns, ignore_patterns):
+    all_patterns = [
+        set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
+        for pattern in match_patterns
+    ]
+    all_patterns = set().union(*all_patterns)
+    ignored_patterns = [
+        set(glob.glob(str(root_dir / pattern), recursive=True, include_hidden=True))
+        for pattern in ignore_patterns
+    ]
+    ignored_patterns = set().union(*ignored_patterns)
+    # distinguish files and directories
+    all_files = {Path(f) for f in all_patterns if Path(f).is_file()}
+    all_dirs = {Path(f) for f in all_patterns if Path(f).is_dir()}
+    ignored_files = {Path(f) for f in ignored_patterns if Path(f).is_file()}
+    ignored_dirs = {Path(f) for f in ignored_patterns if Path(f).is_dir()}
+    selected_files = all_files - ignored_files
+    selected_dirs = all_dirs - ignored_dirs
+    selected_dirs.add(root_dir)  # always include root_dir
+    return selected_files, selected_dirs, ignored_files, ignored_dirs
+
+
+def select_leaf_directories(directories):
+    """Given a set of directories, return only the leaf directories (i.e., those that are not parents of any other directory in the set)."""
+    leaf_dirs = set(directories)
+    skip = False
+    for dir1 in directories:
+        for dir2 in directories:
+            if dir1 != dir2 and dir2.is_relative_to(dir1):
+                if dir1 in leaf_dirs:
+                    leaf_dirs.remove(dir1)
+                    skip = True
+                    break
+        if skip:
+            skip = False
+            continue
+    return leaf_dirs
