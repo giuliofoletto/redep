@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from redep.pull import pull, pull_local
-from redep.util import read_config_file, select_patterns
+from redep.util import read_config_file, select_local_patterns
 
 
 def clean():
@@ -43,7 +43,7 @@ def test_pull_local():
     pull_from = Path(sources[0]["path"])
     if not pull_from.is_absolute():
         pull_from = (Path(root_dir) / sources[0]["path"]).resolve()
-    selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
+    selected_files, selected_dirs, ignored_files, ignored_dirs = select_local_patterns(
         pull_from, matches, ignores
     )
     pull_local(selected_files, selected_dirs, pull_from, root_dir)

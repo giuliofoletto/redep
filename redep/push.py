@@ -9,34 +9,15 @@ from redep.util import (
     identify_remote_os,
     open_connection,
     select_leaf_directories,
-    select_patterns,
+    select_local_patterns,
 )
 
 
 def push(root_dir, matches, ignores, destinations):
     logging.debug(f"Root directory determined as: {root_dir}")
-    selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
+    selected_files, selected_dirs, ignored_files, ignored_dirs = select_local_patterns(
         root_dir, matches, ignores
     )
-    if len(selected_files) > 0:
-        logging.debug(
-            "Selected files: "
-            + ", ".join(sorted({str(file) for file in selected_files}))
-        )
-    if len(selected_dirs) > 0:
-        logging.debug(
-            "Selected directories: "
-            + ", ".join(sorted({str(dir) for dir in selected_dirs}))
-        )
-    if len(ignored_files) > 0:
-        logging.debug(
-            "Ignored files: " + ", ".join(sorted({str(file) for file in ignored_files}))
-        )
-    if len(ignored_dirs) > 0:
-        logging.debug(
-            "Ignored directories: "
-            + ", ".join(sorted({str(dir) for dir in ignored_dirs}))
-        )
     if len(selected_files) == 0 and len(selected_dirs) == 0:
         logging.warning("No files or directories selected for push; aborting.")
         return
@@ -117,7 +98,7 @@ def push_local(files, dirs, root_dir, path):
     # if path coincides with root_dir, no need to push
     if path == root_dir:
         logging.warning(
-            "Destination path coincides with root directory; nothing pushed."
+            "Destination path coincides with local source directory; nothing pushed."
         )
         return
     logging.info(f"Pushing to local system at: {path}")

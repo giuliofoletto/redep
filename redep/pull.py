@@ -8,7 +8,8 @@ from redep.util import (
     identify_remote_os,
     open_connection,
     select_leaf_directories,
-    select_patterns,
+    select_local_patterns,
+    select_remote_patterns,
 )
 
 
@@ -34,43 +35,22 @@ def pull(root_dir, matches, ignores, source):
             path = (root_dir / Path(path)).resolve()
         # expand ~ if needed
         path = expand_home_path_local(path)
-        selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
-            path, matches, ignores
+        selected_files, selected_dirs, ignored_files, ignored_dirs = (
+            select_local_patterns(path, matches, ignores)
         )
+        if len(selected_files) == 0 and len(selected_dirs) == 0:
+            logging.warning("No files or directories selected for pull; aborting.")
+            return
+        pull_local(selected_files, selected_dirs, path, root_dir)
     else:
         conn = open_connection(host)
         selected_files, selected_dirs, ignored_files, ignored_dirs = (
             select_remote_patterns(conn, path, matches, ignores)
         )
-
-    if len(selected_files) > 0:
-        logging.debug(
-            "Selected files: "
-            + ", ".join(sorted({str(file) for file in selected_files}))
-        )
-    if len(selected_dirs) > 0:
-        logging.debug(
-            "Selected directories: "
-            + ", ".join(sorted({str(dir) for dir in selected_dirs}))
-        )
-    if len(ignored_files) > 0:
-        logging.debug(
-            "Ignored files: " + ", ".join(sorted({str(file) for file in ignored_files}))
-        )
-    if len(ignored_dirs) > 0:
-        logging.debug(
-            "Ignored directories: "
-            + ", ".join(sorted({str(dir) for dir in ignored_dirs}))
-        )
-    if len(selected_files) == 0 and len(selected_dirs) == 0:
-        logging.warning("No files or directories selected for pull; aborting.")
-        return
-
-    if host == "":
-        pull_local(selected_files, selected_dirs, path, root_dir)
-    else:
+        if len(selected_files) == 0 and len(selected_dirs) == 0:
+            logging.warning("No files or directories selected for pull; aborting.")
+            return
         pull_remote(conn, selected_files, selected_dirs, path, root_dir)
-
     logging.info("All pull operations completed.")
 
 
@@ -135,59 +115,3 @@ def pull_local(files, dirs, pull_from, pull_to):
         logging.debug(f"Copying {str(file_path)} to {destination_path}")
         shutil.copyfile(file_path, destination_path)
     logging.info(f"Completed push to local system from: {pull_from}")
-
-
-def select_remote_patterns(conn, root_dir, match_patterns, ignore_patterns):
-    if type(conn) is str:
-        # allow passing host instead of connection object
-        conn = open_connection(conn)
-    remote_os = identify_remote_os(conn)
-    if remote_os == "windows":
-        logging.error(
-            "Remote pattern selection on Windows hosts is not yet implemented."
-        )  # TODO
-        return None, None, None, None
-
-    # expand ~ if needed
-    root_dir = expand_home_path_remote(conn, root_dir, remote_os)
-
-    all_files = set()
-    for pattern in match_patterns:
-        result = conn.run(
-            f"find {root_dir} -type f -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        all_files.update([PurePosixPath(f) for f in result])
-    all_dirs = set()
-    for pattern in match_patterns:
-        result = conn.run(
-            f"find {root_dir} -type d -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        all_dirs.update([PurePosixPath(f) for f in result])
-    ignored_files = set()
-    for pattern in ignore_patterns:
-        result = conn.run(
-            f"find {root_dir} -type f -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        ignored_files.update([PurePosixPath(f) for f in result])
-    ignored_dirs = set()
-    for pattern in ignore_patterns:
-        result = conn.run(
-            f"find {root_dir} -type d -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        ignored_dirs.update([PurePosixPath(f) for f in result])
-    selected_files = all_files - ignored_files
-    selected_dirs = all_dirs - ignored_dirs
-    selected_dirs.add(root_dir)  # always include root_dir
-    return selected_files, selected_dirs, ignored_files, ignored_dirs

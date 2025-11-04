@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from redep.push import push, push_local
-from redep.util import read_config_file, select_patterns
+from redep.util import read_config_file, select_local_patterns
 
 
 def clean():
@@ -17,7 +17,9 @@ def test_push_local():
     clean()
     config_path = Path(__file__).parent / "src_dir" / "redep.toml"
     root_dir, matches, ignores, destinations = read_config_file(config_path)
-    selected_files, selected_dirs, _, _ = select_patterns(root_dir, matches, ignores)
+    selected_files, selected_dirs, _, _ = select_local_patterns(
+        root_dir, matches, ignores
+    )
     push_local(selected_files, selected_dirs, root_dir, destinations[0]["path"])
     dst_dir = Path(__file__).parent / "dst_dir"
     assert dst_dir.exists()

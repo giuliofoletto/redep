@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from redep.util import read_config_file, select_leaf_directories, select_patterns
+from redep.util import read_config_file, select_leaf_directories, select_local_patterns
 
 
 def test_read_config_file():
@@ -23,10 +23,10 @@ def test_read_config_file():
     ]
 
 
-def test_select_patterns():
+def test_select_local_patterns():
     config_path = Path(__file__).parent / "src_dir" / "redep.toml"
     root_dir, matches, ignores, remotes = read_config_file(config_path)
-    selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
+    selected_files, selected_dirs, ignored_files, ignored_dirs = select_local_patterns(
         root_dir, matches, ignores
     )
     expected_selected_files = {
