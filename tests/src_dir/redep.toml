@@ -1,7 +1,7 @@
 # redep configuration file
-root_dir = "./"  # In most cases, keep as is. This means the root directory is the directory where this config file is located.
+root_dir = "./"
 
-match = ["**/*"]  # In most cases, keep as is. This means all files in the root directory and subdirectories are considered for deployment.
+match = ["*", "**/*"]
 
 ignore = ["./redep.toml", "./to_ignore.txt", "./to_ignore/**"]
 

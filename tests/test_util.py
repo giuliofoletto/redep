@@ -8,7 +8,7 @@ def test_read_config_file():
     config_path = Path(__file__).parent / "src_dir" / "redep.toml"
     root_dir, matches, ignores, remotes = read_config_file(config_path)
     assert root_dir == config_path.parent
-    assert matches == [Path("**/*")]
+    assert matches == [Path("*"), Path("**/*")]
     assert ignores == [
         Path("./redep.toml"),
         Path("./to_ignore.txt"),

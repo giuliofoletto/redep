@@ -13,15 +13,15 @@ def init(config_path):
     file_name = config_path.name
     default_configuration_string = f"""
     # redep configuration file
-root_dir = "./"  # In most cases, keep as is. This means the root directory is the directory where this config file is located.
+root_dir = "./"  # In most cases, keep as is. This is interpreted as the directory where this config file is located.
 
-match = ["**/*"]  # In most cases, keep as is. This means all files in the root directory and subdirectories are considered for deployment.
+match = ["*", "**/*"]  # In most cases, keep as is. This matches everything in the root_dir.
 
 ignore = ["./{str(file_name).replace("\\", "/")}"]
     
 [[remotes]]
-host = ""  # Replace with remote host or leave empty for local push
-path = "./"  # Replace with path on the host. For local push, this is relative to the directory of the config file.
+host = ""  # Replace with remote host or leave empty for local operations.
+path = "./"  # Replace with path on the host. For local operations, this can be relative to root_dir.
     """
     with open(config_path, "w") as config_file:
         config_file.write(default_configuration_string.strip())
