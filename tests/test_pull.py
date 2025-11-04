@@ -1,7 +1,8 @@
-import pytest
 import glob
-from pathlib import Path
 import shutil
+from pathlib import Path
+
+import pytest
 
 from redep.pull import pull, pull_local
 from redep.util import read_config_file, select_patterns

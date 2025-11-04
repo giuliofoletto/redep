@@ -1,10 +1,10 @@
 import logging
+import shutil
 from pathlib import Path, PurePosixPath
 
 import fabric
-import shutil
 
-from redep.util import select_patterns, select_leaf_directories
+from redep.util import select_leaf_directories, select_patterns
 
 
 def pull(root_dir, matches, ignores, source):

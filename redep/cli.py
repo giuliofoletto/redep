@@ -7,15 +7,11 @@ License: See project-level license file.
 
 import click
 
-from redep.util import (
-    configure_logging,
-    find_existing_config,
-    find_path_new_config,
-    read_config_file,
-)
+from redep.init import init
 from redep.pull import pull
 from redep.push import push
-from redep.init import init
+from redep.util import (configure_logging, find_existing_config,
+                        find_path_new_config, read_config_file)
 
 
 @click.group(invoke_without_command=True)

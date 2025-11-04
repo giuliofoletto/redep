@@ -1,7 +1,9 @@
-import pytest
 from pathlib import Path
 
-from redep.util import read_config_file, select_patterns, select_leaf_directories
+import pytest
+
+from redep.util import (read_config_file, select_leaf_directories,
+                        select_patterns)
 
 
 def test_read_config_file():

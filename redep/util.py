@@ -8,9 +8,8 @@ License: See project-level license file.
 import glob
 import logging
 import sys
-
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 
 def configure_logging():

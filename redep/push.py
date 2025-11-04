@@ -1,11 +1,11 @@
 import logging
+import shutil
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from threading import Thread
 
 import fabric
-import shutil
 
-from redep.util import select_patterns, select_leaf_directories
+from redep.util import select_leaf_directories, select_patterns
 
 
 def push(root_dir, matches, ignores, destinations):

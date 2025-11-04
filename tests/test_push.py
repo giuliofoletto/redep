@@ -1,11 +1,11 @@
-import pytest
 import glob
 import shutil
+from pathlib import Path
+
+import pytest
 
 from redep.push import push, push_local
 from redep.util import read_config_file, select_patterns
-
-from pathlib import Path
 
 
 def clean():
