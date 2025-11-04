@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "redep"
 dynamic = ["version"]
-description = "A glorified scp script to redeploy files to multiple remote machines."
+description = "Push and pull directories from multiple remote machines."
 readme = "README.md"
 license = "Apache-2.0"
 authors = [
