@@ -73,13 +73,15 @@ def push(root_dir, matches, ignores, destinations):
     logging.info("All push operations completed.")
 
 
-def push_remote(files, dirs, root_dir, host, path):
-    logging.info(f"Pushing to remote destination: {host}:{path}")
-    conn = open_connection(host)
+def push_remote(files, dirs, root_dir, conn, path):
+    if type(conn) is str:
+        # allow passing host instead of connection object
+        host = conn
+        conn = open_connection(host)
     remote_os = identify_remote_os(conn)
-
     # expand ~ if needed
     path = expand_home_path_remote(conn, path, remote_os)
+    logging.info(f"Pushing to remote destination: {conn.original_host}:{path}")
 
     # reduce the directories to include only leaves
     dirs = select_leaf_directories(dirs)
@@ -99,26 +101,26 @@ def push_remote(files, dirs, root_dir, host, path):
             remote_path = PureWindowsPath(path / str(relative_path).replace("/", "\\"))
         else:
             remote_path = PurePosixPath(path / str(relative_path).replace("\\", "/"))
-        logging.debug(f"Uploading {str(file_path)} to {host}:{remote_path}")
+        logging.debug(
+            f"Uploading {str(file_path)} to {conn.original_host}:{remote_path}"
+        )
         conn.put(file_path, str(remote_path))
-    logging.info(f"Completed push to remote destination: {host}:{path}")
+    logging.info(f"Completed push to remote destination: {conn.original_host}:{path}")
 
 
 def push_local(files, dirs, root_dir, path):
-    logging.info(f"Pushing to local system at: {path}")
     # expand ~ if needed
     path = expand_home_path_local(path)
-
     # if path is relative, make it absolute with respect to root_dir
     if not path.is_absolute():
         path = root_dir / path
-
     # if path coincides with root_dir, no need to push
     if path == root_dir:
         logging.warning(
-            "Destination path coincides with root directory; no files pushed."
+            "Destination path coincides with root directory; nothing pushed."
         )
         return
+    logging.info(f"Pushing to local system at: {path}")
 
     # reduce the directories to include only leaves
     dirs = select_leaf_directories(dirs)

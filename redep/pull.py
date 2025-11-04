@@ -38,8 +38,9 @@ def pull(root_dir, matches, ignores, source):
             path, matches, ignores
         )
     else:
+        conn = open_connection(host)
         selected_files, selected_dirs, ignored_files, ignored_dirs = (
-            select_remote_patterns(host, path, matches, ignores)
+            select_remote_patterns(conn, path, matches, ignores)
         )
 
     if len(selected_files) > 0:
@@ -68,27 +69,28 @@ def pull(root_dir, matches, ignores, source):
     if host == "":
         pull_local(selected_files, selected_dirs, path, root_dir)
     else:
-        pull_remote(host, selected_files, selected_dirs, path, root_dir)
+        pull_remote(conn, selected_files, selected_dirs, path, root_dir)
 
     logging.info("All pull operations completed.")
 
 
-def pull_remote(host, files, dirs, pull_from, pull_to):
-    logging.info(f"Pulling from remote host: {host}:{pull_from}")
-    conn = open_connection(host)
+def pull_remote(conn, files, dirs, pull_from, pull_to):
+    if type(conn) is str:
+        # allow passing host instead of connection object
+        host = conn
+        conn = open_connection(host)
     remote_os = identify_remote_os(conn)
     if remote_os == "windows":
         logging.error(
             "Remote pattern selection on Windows hosts is not yet implemented."
         )  # TODO
         return
-
     # expand ~ if needed
-    pull_from = expand_home_path_remote(conn, pull_from)
+    pull_from = expand_home_path_remote(conn, pull_from, remote_os)
+    logging.info(f"Pulling from remote host: {conn.original_host}:{pull_from}")
 
     # reduce the directories to include only leaves
     dirs = select_leaf_directories(dirs)
-
     # create dirs
     for dir_path in dirs:
         relative_path = dir_path.relative_to(pull_from)
@@ -99,24 +101,24 @@ def pull_remote(host, files, dirs, pull_from, pull_to):
     for file_path in files:
         relative_path = file_path.relative_to(pull_from)
         destination_path = pull_to / relative_path
-        logging.debug(f"Pulling {str(file_path)} to {destination_path}")
+        logging.debug(
+            f"Downloading {conn.original_host}:{str(file_path)} to {destination_path}"
+        )
         conn.get(str(file_path), str(destination_path))
-    logging.info(f"Completed pull from remote host: {host}:{pull_from}")
+    logging.info(f"Completed pull from remote host: {conn.original_host}:{pull_from}")
 
 
 def pull_local(files, dirs, pull_from, pull_to):
-    logging.info(f"Pulling to local system from: {pull_from}")
     # expand ~ if needed
     pull_from = expand_home_path_local(pull_from)
-
     # if pull_from is relative, make it absolute with respect to pull_to (plays the role of root_dir here)
     if not pull_from.is_absolute():
         pull_from = pull_to / pull_from
-
     # if path coincides with root_dir, no need to push
     if pull_to == pull_from:
-        logging.warning("Source and destination paths coincide; nothing pushed.")
+        logging.warning("Local source and destination paths coincide; nothing pulled.")
         return
+    logging.info(f"Pulling to local system from: {pull_from}")
 
     # reduce the directories to include only leaves
     dirs = select_leaf_directories(dirs)
@@ -135,8 +137,10 @@ def pull_local(files, dirs, pull_from, pull_to):
     logging.info(f"Completed push to local system from: {pull_from}")
 
 
-def select_remote_patterns(host, root_dir, match_patterns, ignore_patterns):
-    conn = open_connection(host)
+def select_remote_patterns(conn, root_dir, match_patterns, ignore_patterns):
+    if type(conn) is str:
+        # allow passing host instead of connection object
+        conn = open_connection(conn)
     remote_os = identify_remote_os(conn)
     if remote_os == "windows":
         logging.error(
