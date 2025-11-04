@@ -9,7 +9,9 @@ import glob
 import logging
 import sys
 import tomllib
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
+
+import fabric
 
 
 def configure_logging():
@@ -124,3 +126,55 @@ def select_leaf_directories(directories):
             skip = False
             continue
     return leaf_dirs
+
+
+def open_connection(host):
+    conn = fabric.Connection(host=host)
+    try:
+        conn.open()
+        return conn
+    except Exception as e:
+        logging.error(f"Could not connect to host '{host}': {e}")
+        raise e
+
+
+def identify_remote_os(connection):
+    result = connection.run("uname -s", hide=True, warn=True)
+    remote_os = None
+    if result.ok:
+        remote_os = result.stdout.strip().lower()
+    else:
+        # check if it's windows by running 'ver' command
+        result_ver = connection.run("ver", hide=True, warn=True)
+        if result_ver.ok:
+            remote_os = "windows"
+        else:
+            # assume posix if both commands fail
+            remote_os = "posix"
+    return remote_os
+
+
+def expand_home_path_remote(connection, path, remote_os):
+    if remote_os == "windows":
+        if str(path).startswith("~"):
+            path = (
+                PureWindowsPath(
+                    connection.run("echo %USERPROFILE%", hide=True).stdout.strip()
+                )
+                / str(path)[2:]
+            )
+        path = PureWindowsPath(str(path).replace("/", "\\"))  # TODO find better way
+    else:
+        if str(path).startswith("~"):
+            path = (
+                PurePosixPath(connection.run("echo $HOME", hide=True).stdout.strip())
+                / str(path)[2:]
+            )
+        path = PurePosixPath(str(path).replace("\\", "/"))  # TODO find better way
+    return path
+
+
+def expand_home_path_local(path):
+    if str(path).startswith("~"):
+        path = Path.home() / str(path)[2:]
+    return path

@@ -2,9 +2,14 @@ import logging
 import shutil
 from pathlib import Path, PurePosixPath
 
-import fabric
-
-from redep.util import select_leaf_directories, select_patterns
+from redep.util import (
+    expand_home_path_local,
+    expand_home_path_remote,
+    identify_remote_os,
+    open_connection,
+    select_leaf_directories,
+    select_patterns,
+)
 
 
 def pull(root_dir, matches, ignores, source):
@@ -27,8 +32,8 @@ def pull(root_dir, matches, ignores, source):
             path = "."
         if not Path(path).is_absolute():
             path = (root_dir / Path(path)).resolve()
-        if str(path).startswith("~"):
-            path = Path.home() / str(path)[2:]
+        # expand ~ if needed
+        path = expand_home_path_local(path)
         selected_files, selected_dirs, ignored_files, ignored_dirs = select_patterns(
             path, matches, ignores
         )
@@ -70,46 +75,20 @@ def pull(root_dir, matches, ignores, source):
 
 def pull_remote(host, files, dirs, pull_from, pull_to):
     logging.info(f"Pulling from remote host: {host}:{pull_from}")
-    conn = fabric.Connection(host=host)
-    # verify if host is reachable
-    try:
-        conn.open()
-    except Exception as e:
-        logging.error(f"Could not connect to host '{host}': {e}")
-        return
-    # check if remote host is posix by running 'uname' command
-    result = conn.run("uname -s", hide=True, warn=True)
-    remote_os = None
-    if result.failed:
-        # check if it's windows by running 'ver' command
-        result_ver = conn.run("ver", hide=True, warn=True)
-        if result_ver.failed:
-            logging.warning(
-                f"Could not determine operating system of remote host '{host}'; assuming POSIX-compliant."
-            )
-            remote_os = "posix"
-        else:
-            remote_os = "windows"
-            logging.debug(f"Remote host '{host}' does not seem to be a POSIX system.")
-    else:
-        remote_os = result.stdout.strip()
-        logging.debug(f"Remote host '{host}' is running: {remote_os}")
-
+    conn = open_connection(host)
+    remote_os = identify_remote_os(conn)
     if remote_os == "windows":
         logging.error(
             "Remote pattern selection on Windows hosts is not yet implemented."
         )  # TODO
         return
 
-    # Expand ~ if needed
-    if str(pull_from).startswith("~"):
-        pull_from = (
-            PurePosixPath(conn.run("echo $HOME", hide=True).stdout.strip())
-            / str(pull_from)[2:]
-        )
+    # expand ~ if needed
+    pull_from = expand_home_path_remote(conn, pull_from)
 
     # reduce the directories to include only leaves
     dirs = select_leaf_directories(dirs)
+
     # create dirs
     for dir_path in dirs:
         relative_path = dir_path.relative_to(pull_from)
@@ -127,9 +106,8 @@ def pull_remote(host, files, dirs, pull_from, pull_to):
 
 def pull_local(files, dirs, pull_from, pull_to):
     logging.info(f"Pulling to local system from: {pull_from}")
-    # if path starts with ~, expand it
-    if str(pull_from).startswith("~"):
-        pull_from = Path.home() / str(pull_from)[2:]
+    # expand ~ if needed
+    pull_from = expand_home_path_local(pull_from)
 
     # if pull_from is relative, make it absolute with respect to pull_to (plays the role of root_dir here)
     if not pull_from.is_absolute():
@@ -158,43 +136,16 @@ def pull_local(files, dirs, pull_from, pull_to):
 
 
 def select_remote_patterns(host, root_dir, match_patterns, ignore_patterns):
-    conn = fabric.Connection(host=host)
-    # verify if host is reachable
-    try:
-        conn.open()
-    except Exception as e:
-        logging.error(f"Could not connect to host '{host}': {e}")
-        return None, None, None, None
-    # check if remote host is posix by running 'uname' command
-    result = conn.run("uname -s", hide=True, warn=True)
-    remote_os = None
-    if result.failed:
-        # check if it's windows by running 'ver' command
-        result_ver = conn.run("ver", hide=True, warn=True)
-        if result_ver.failed:
-            logging.warning(
-                f"Could not determine operating system of remote host '{host}'; assuming POSIX-compliant."
-            )
-            remote_os = "posix"
-        else:
-            remote_os = "windows"
-            logging.debug(f"Remote host '{host}' does not seem to be a POSIX system.")
-    else:
-        remote_os = result.stdout.strip()
-        logging.debug(f"Remote host '{host}' is running: {remote_os}")
-
+    conn = open_connection(host)
+    remote_os = identify_remote_os(conn)
     if remote_os == "windows":
         logging.error(
             "Remote pattern selection on Windows hosts is not yet implemented."
         )  # TODO
         return None, None, None, None
 
-    # Expand ~ if needed
-    if str(root_dir).startswith("~"):
-        root_dir = (
-            PurePosixPath(conn.run("echo $HOME", hide=True).stdout.strip())
-            / str(root_dir)[2:]
-        )
+    # expand ~ if needed
+    root_dir = expand_home_path_remote(conn, root_dir, remote_os)
 
     all_files = set()
     for pattern in match_patterns:

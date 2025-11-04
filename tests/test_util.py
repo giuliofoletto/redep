@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from redep.util import (read_config_file, select_leaf_directories,
-                        select_patterns)
+from redep.util import read_config_file, select_leaf_directories, select_patterns
 
 
 def test_read_config_file():

@@ -3,9 +3,14 @@ import shutil
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from threading import Thread
 
-import fabric
-
-from redep.util import select_leaf_directories, select_patterns
+from redep.util import (
+    expand_home_path_local,
+    expand_home_path_remote,
+    identify_remote_os,
+    open_connection,
+    select_leaf_directories,
+    select_patterns,
+)
 
 
 def push(root_dir, matches, ignores, destinations):
@@ -70,49 +75,11 @@ def push(root_dir, matches, ignores, destinations):
 
 def push_remote(files, dirs, root_dir, host, path):
     logging.info(f"Pushing to remote destination: {host}:{path}")
-    conn = fabric.Connection(host=host)
-    # verify if host is reachable
-    try:
-        conn.open()
-    except Exception as e:
-        logging.error(f"Could not connect to host '{host}': {e}")
-        return
-    # check if remote host is posix by running 'uname' command
-    result = conn.run("uname -s", hide=True, warn=True)
-    remote_os = None
-    if result.failed:
-        # check if it's windows by running 'ver' command
-        result_ver = conn.run("ver", hide=True, warn=True)
-        if result_ver.failed:
-            logging.warning(
-                f"Could not determine operating system of remote host '{host}'; assuming POSIX-compliant."
-            )
-            remote_os = "posix"
-        else:
-            remote_os = "windows"
-            logging.debug(f"Remote host '{host}' does not seem to be a POSIX system.")
-    else:
-        remote_os = result.stdout.strip()
-        logging.debug(f"Remote host '{host}' is running: {remote_os}")
+    conn = open_connection(host)
+    remote_os = identify_remote_os(conn)
 
-    # if path starts with ~, expand it
-    if remote_os == "windows":
-        if str(path).startswith("~"):
-            path = (
-                PureWindowsPath(
-                    conn.run("echo %USERPROFILE%", hide=True).stdout.strip()
-                )
-                / str(path)[2:]
-            )
-        path = PureWindowsPath(str(path).replace("/", "\\"))  # TODO find better way
-
-    else:
-        if str(path).startswith("~"):
-            path = (
-                PurePosixPath(conn.run("echo $HOME", hide=True).stdout.strip())
-                / str(path)[2:]
-            )
-        path = PurePosixPath(str(path).replace("\\", "/"))  # TODO find better way
+    # expand ~ if needed
+    path = expand_home_path_remote(conn, path, remote_os)
 
     # reduce the directories to include only leaves
     dirs = select_leaf_directories(dirs)
@@ -139,9 +106,8 @@ def push_remote(files, dirs, root_dir, host, path):
 
 def push_local(files, dirs, root_dir, path):
     logging.info(f"Pushing to local system at: {path}")
-    # if path starts with ~, expand it
-    if str(path).startswith("~"):
-        path = Path.home() / str(path)[2:]
+    # expand ~ if needed
+    path = expand_home_path_local(path)
 
     # if path is relative, make it absolute with respect to root_dir
     if not path.is_absolute():
