@@ -74,18 +74,27 @@ def push_remote(files, dirs, root_dir, conn, path):
         else:
             remote_dir = PurePosixPath(path / str(relative_path).replace("\\", "/"))
         logging.debug(f"Creating remote directory: {remote_dir}")
-        conn.run(f"mkdir -p '{remote_dir}'")
+        if remote_os == "windows":
+            conn.run(
+                f"PowerShell -Command mkdir -p '{remote_dir}' -Force",
+                hide=True,
+                warn=True,
+            )
+        else:
+            conn.run(f"mkdir -p '{remote_dir}'", hide=True, warn=True)
     # push files
     for file_path in files:
         relative_path = file_path.relative_to(root_dir)
         if remote_os == "windows":
             remote_path = PureWindowsPath(path / str(relative_path).replace("/", "\\"))
+            str_remote_path = "/" + str(remote_path)
         else:
             remote_path = PurePosixPath(path / str(relative_path).replace("\\", "/"))
+            str_remote_path = str(remote_path)
         logging.debug(
             f"Uploading {str(file_path)} to {conn.original_host}:{remote_path}"
         )
-        conn.put(file_path, str(remote_path))
+        conn.put(file_path, str_remote_path)
     logging.info(f"Completed push to remote destination: {conn.original_host}:{path}")
 
 
