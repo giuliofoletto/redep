@@ -60,11 +60,7 @@ def pull_remote(conn, files, dirs, pull_from, pull_to):
         host = conn
         conn = open_connection(host)
     remote_os = identify_remote_os(conn)
-    if remote_os == "windows":
-        logging.error(
-            "Remote pattern selection on Windows hosts is not yet implemented."
-        )  # TODO
-        return
+
     # expand ~ if needed
     pull_from = expand_home_path_remote(conn, pull_from, remote_os)
     logging.info(f"Pulling from remote host: {conn.original_host}:{pull_from}")
@@ -84,7 +80,11 @@ def pull_remote(conn, files, dirs, pull_from, pull_to):
         logging.debug(
             f"Downloading {conn.original_host}:{str(file_path)} to {destination_path}"
         )
-        conn.get(str(file_path), str(destination_path))
+        if remote_os == "windows":
+            str_file_path = "/" + str(file_path).replace("/", "\\")
+        else:
+            str_file_path = str(file_path)
+        conn.get(str_file_path, str(destination_path))
     logging.info(f"Completed pull from remote host: {conn.original_host}:{pull_from}")
 
 

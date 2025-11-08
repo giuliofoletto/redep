@@ -185,51 +185,83 @@ def select_remote_patterns(conn, root_dir, match_patterns, ignore_patterns):
         # allow passing host instead of connection object
         conn = open_connection(conn)
     remote_os = identify_remote_os(conn)
-    if remote_os == "windows":
-        logging.error(
-            "Remote pattern selection on Windows hosts is not yet implemented."
-        )  # TODO
-        return set(), set(), set(), set()
 
     # expand ~ if needed
     root_dir = expand_home_path_remote(conn, root_dir, remote_os)
 
     all_files = set()
     for pattern in match_patterns:
-        result = conn.run(
-            f"find {root_dir} -type f -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        all_files.update([PurePosixPath(f) for f in result])
+        if remote_os == "windows":
+            result = conn.run(
+                f"PowerShell -Command \"Get-ChildItem -Path {root_dir} -File -Recurse | Where-Object {{ $_.FullName -like \'{str(root_dir / pattern).replace("/", "\\")}\' }} | Select-Object -ExpandProperty FullName\"",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+            all_files.update([PureWindowsPath(f) for f in result])
+        else:
+            result = conn.run(
+                f"find {root_dir} -type f -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+            all_files.update([PurePosixPath(f) for f in result])
     all_dirs = set()
     for pattern in match_patterns:
-        result = conn.run(
-            f"find {root_dir} -type d -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        all_dirs.update([PurePosixPath(f) for f in result])
+        if remote_os == "windows":
+            result = conn.run(
+                f"PowerShell -Command \"Get-ChildItem -Path {root_dir} -Directory -Recurse | Where-Object {{ $_.FullName -like \'{str(root_dir / pattern).replace("/", "\\")}\' }} | Select-Object -ExpandProperty FullName\"",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+            all_dirs.update([PureWindowsPath(f) for f in result])
+        else:
+            result = conn.run(
+                f"find {root_dir} -type d -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+            all_dirs.update([PurePosixPath(f) for f in result])
     ignored_files = set()
     for pattern in ignore_patterns:
-        result = conn.run(
-            f"find {root_dir} -type f -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        ignored_files.update([PurePosixPath(f) for f in result])
+        if remote_os == "windows":
+            result = conn.run(
+                f"PowerShell -Command \"Get-ChildItem -Path {root_dir} -File -Recurse | Where-Object {{ $_.FullName -like \'{str(root_dir / pattern).replace("/", "\\")}\' }} | Select-Object -ExpandProperty FullName\"",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+
+            ignored_files.update([PureWindowsPath(f) for f in result])
+        else:
+            result = conn.run(
+                f"find {root_dir} -type f -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+            ignored_files.update([PurePosixPath(f) for f in result])
     ignored_dirs = set()
     for pattern in ignore_patterns:
-        result = conn.run(
-            f"find {root_dir} -type d -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
-            hide=True,
-            warn=True,
-        )
-        result = result.stdout.strip().split()
-        ignored_dirs.update([PurePosixPath(f) for f in result])
+        if remote_os == "windows":
+            result = conn.run(
+                f"PowerShell -Command \"Get-ChildItem -Path {root_dir} -Directory -Recurse | Where-Object {{ $_.FullName -like \'{str(root_dir / pattern).replace("/", "\\")}\' }} | Select-Object -ExpandProperty FullName\"",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+            ignored_dirs.update([PureWindowsPath(f) for f in result])
+        else:
+            result = conn.run(
+                f"find {root_dir} -type d -wholename '{str(root_dir) + "/" + str(pattern).replace("\\", "/")}'",
+                hide=True,
+                warn=True,
+            )
+            result = result.stdout.strip().split()
+            ignored_dirs.update([PurePosixPath(f) for f in result])
     selected_files = all_files - ignored_files
     selected_dirs = all_dirs - ignored_dirs
     selected_dirs.add(root_dir)  # always include root_dir

@@ -33,7 +33,6 @@ Whenever you change something and want to redeploy, just run the push command ag
 
 Next planned features:
 
--   Pull from Windows machines.
 -   Pull from multiple hosts.
 -   Full cross-platform support.
 
