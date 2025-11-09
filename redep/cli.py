@@ -7,7 +7,7 @@ License: See project-level license file.
 
 import click
 
-from redep.init import init, add_remote, remove_remote
+from redep.config import init, add_remote, remove_remote
 from redep.pull import pull
 from redep.push import push
 from redep.util import (
