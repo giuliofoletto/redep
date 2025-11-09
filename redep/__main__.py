@@ -11,7 +11,9 @@ from redep.util import configure_logging
 
 def main():
     configure_logging()
-    cli()
+    cli(
+        windows_expand_args=False
+    )  # Disable automatic expansion of arguments on Windows
 
 
 if __name__ == "__main__":

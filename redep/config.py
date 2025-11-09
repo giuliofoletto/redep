@@ -100,3 +100,49 @@ def remove_remote(config_path, host_path_string):
     logging.info(
         f"Removed remote host = {host}, path = {path} from configuration at: {config_path}"
     )
+
+
+def add_ignore_pattern(config_path, pattern):
+    """
+    Add a new ignore pattern to an existing redep configuration file.
+    """
+    if not config_path.exists():
+        logging.error(f"The configuration file '{config_path}' does not exist.")
+        return
+    with open(config_path, "rb") as config_file:
+        config_data = tomllib.load(config_file)
+    ignores = config_data.get("ignore", [])
+    if pattern in ignores:
+        logging.warning(
+            f"The ignore pattern '{pattern}' already exists in the configuration."
+        )
+        return
+    ignores.append(pattern)
+    config_data["ignore"] = ignores
+    with open(config_path, "wb") as config_file:
+        tomli_w.dump(config_data, config_file)
+    logging.info(f"Added ignore pattern '{pattern}' to configuration at: {config_path}")
+
+
+def remove_ignore_pattern(config_path, pattern):
+    """
+    Remove an ignore pattern from an existing redep configuration file.
+    """
+    if not config_path.exists():
+        logging.error(f"The configuration file '{config_path}' does not exist.")
+        return
+    with open(config_path, "rb") as config_file:
+        config_data = tomllib.load(config_file)
+    ignores = config_data.get("ignore", [])
+    if pattern not in ignores:
+        logging.warning(
+            f"The ignore pattern '{pattern}' does not exist in the configuration."
+        )
+        return
+    ignores.remove(pattern)
+    config_data["ignore"] = ignores
+    with open(config_path, "wb") as config_file:
+        tomli_w.dump(config_data, config_file)
+    logging.info(
+        f"Removed ignore pattern '{pattern}' from configuration at: {config_path}"
+    )
