@@ -3,7 +3,7 @@ import tomllib
 import tomli_w
 
 
-def init(config_path):
+def init(config_path, config=None):
     """
     Initialize a new redep configuration file at the specified path.
     """
@@ -13,14 +13,15 @@ def init(config_path):
     # create parent directories if they don't exist
     config_path.parent.mkdir(parents=True, exist_ok=True)
     file_name = config_path.name
-    default_configuration = {
-        "root_dir": "./",
-        "match": ["*", "**/*"],
-        "ignore": [f"./{str(file_name).replace('\\', '/')}"],
-        "remotes": [],
-    }
+    if config is None:
+        config = {
+            "root_dir": "./",
+            "match": ["*", "**/*"],
+            "ignore": [f"./{str(file_name).replace('\\', '/')}"],
+            "remotes": [],
+        }
     with open(config_path, "wb") as config_file:
-        tomli_w.dump(default_configuration, config_file)
+        tomli_w.dump(config, config_file)
     logging.info(f"Initialized new redep configuration at: {config_path}")
 
 

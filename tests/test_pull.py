@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from redep.config import init
 from redep.pull import pull, pull_local
 from redep.util import read_config_file, select_local_patterns
 
@@ -17,22 +18,14 @@ def prepare():
     dst_dir = Path(__file__).parent / "pulled_dir"
     if not dst_dir.exists():
         dst_dir.mkdir()
-    config = dst_dir / "redep.toml"
-    with open(config, "w") as f:
-        f.write(
-            """
-    # redep configuration file
-root_dir = "./"  # In most cases, keep as is. This means the root directory is the directory where this config file is located.
-
-match = ["**/*"]  # In most cases, keep as is. This means all files in the root directory and subdirectories are considered for deployment.
-
-ignore = ["./redep.toml", "./to_ignore.txt", "./to_ignore/**"]
-    
-[[remotes]]
-host = ""  # Replace with remote host or leave empty for local push
-path = "../src_dir"  # Replace with path on the host. For local push, this is relative to the directory of the config file.
-    """
-        )
+    config_path = dst_dir / "redep.toml"
+    config = {
+        "root_dir": "./",
+        "match": ["**/*"],
+        "ignore": ["./redep.toml", "./to_ignore.txt", "./to_ignore/**"],
+        "remotes": [{"host": "", "path": "../src_dir"}],
+    }
+    init(config_path, config)
     return
 
 
