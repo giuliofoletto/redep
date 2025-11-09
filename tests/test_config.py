@@ -1,14 +1,14 @@
-import pytest
-
 import tomllib
 from pathlib import Path
 
+import pytest
+
 from redep.config import (
-    init,
-    add_remote,
-    remove_remote,
     add_ignore_pattern,
+    add_remote,
+    init,
     remove_ignore_pattern,
+    remove_remote,
 )
 
 

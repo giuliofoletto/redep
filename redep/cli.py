@@ -8,11 +8,11 @@ License: See project-level license file.
 import click
 
 from redep.config import (
-    init,
-    add_remote,
-    remove_remote,
     add_ignore_pattern,
+    add_remote,
+    init,
     remove_ignore_pattern,
+    remove_remote,
 )
 from redep.pull import pull
 from redep.push import push
